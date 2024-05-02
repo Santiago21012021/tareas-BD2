@@ -1,0 +1,148 @@
+set serveroutput on;
+--Ejercicio 1
+create or replace function 
+estudiante_nombre(estudiante_nombre varchar2)
+return varchar2
+IS
+var_conteo number;
+var_h varchar2(500);
+BEGIN 
+select count(*) into var_conteo from estudiantes where lower(nombre) like lower (estudiante_nombre||'%');
+  if var_conteo>0 then
+    var_h:= 'existen ' || var_conteo|| ' estudiantes con el mismo nombre';
+    else 
+    var_h:='No hay estudiantes con ese nombre';
+  end if;
+  return var_h;
+end;
+select *from estudiantes;
+select estudiante_nombre('&Ingresa_un_nombre') from dual;
+
+--Ejercicio 2
+CREATE OR REPLACE PROCEDURE 
+actualizarEspecialidad
+AS
+BEGIN
+DELETE FROM especialidades;
+FOR i in (SELECT especialidad as especialidad, SUM(creditos) as creditos, COUNT(*) as student FROM estudiantes GROUP BY especialidad)LOOP
+    Insert into especialidades values(i.especialidad, i.creditos, i.student);
+    END LOOP;
+    commit;
+END;
+EXECUTE actualizarEspecialidad()
+--ejercicio 3
+create or replace procedure 
+ matricular(estudiante_id matriculas.idestudiante%type,
+departamento_curso matriculas.departamento%type,
+numero_curso matriculas.ncurso%type,
+grado matriculas.grado%type)
+as
+BEGIN 
+INSERT INTO matriculas (idestudiante, departamento, ncurso, grado) VALUES (estudiante_id, departamento_curso, numero_curso, grado);
+END matricular;
+--ejercicio 4
+create or replace function idMayorYmenor
+return varchar
+is
+var_1 varchar(200);
+id_mayor number :=0;
+id_menor number;
+begin
+for i in (select id from estudiantes) loop
+if i.id >id_mayor then
+id_mayor:=i.id;
+end if;
+end loop;
+id_menor:=id_mayor;
+for i in (select id from estudiantes) loop
+if i.id <id_menor then
+id_menor:=i.id;
+end if;
+end loop;
+var_1:= 'El estudiante con el ID mayor es: '||id_mayor||' Y estudiante con el ID menor es: '||id_menor;
+return var_1;
+end;
+// EJERCICIO 5
+
+CREATE OR REPLACE TRIGGER
+tr_creditos
+BEFORE INSERT OR UPDATE ON estudiantes FOR EACH ROW
+BEGIN
+    IF :new.creditos <= 6 OR :new.creditos >= 15 THEN
+        RAISE_APPLICATION_ERROR(-20001,'Creditos Invalidos');
+    END IF;
+END tr_creditos;
+
+INSERT INTO estudiantes VALUES (188, 'Santiago', 'Bohorquez', 'Nutricion',12)
+// EJERCICIO 6
+
+CREATE OR REPLACE PROCEDURE 
+SUBIR_CREDITOS
+as 
+var_cred number;
+BEGIN 
+ SELECT COUNT (*) INTO var_cred from estudiantes where lower(especialidad)= lower('deportes');
+  if var_cred>0 then 
+    update estudiantes set creditos= creditos+2  where 
+    lower(especialidad)=lower('deportes');
+   end if;
+end;
+execute SUBIR_CREDITOS ();
+//EJERCICIO 7
+
+CREATE OR REPLACE FUNCTION 
+correo_est(estudiante_id estudiantes.id%type)
+RETURN VARCHAR
+IS
+var_nombre estudiantes.nombre%type;
+var_apellido estudiantes.apellido%type;
+var_3 number;
+BEGIN
+SELECT LOWER(nombre) INTO var_nombre FROM estudiantes WHERE id= estudiante_id;
+SELECT LOWER(apellido) INTO var_apellido FROM estudiantes WHERE id= estudiante_id;
+var_3:=EXTRACT(YEAR FROM SYSDATE);
+IF
+var_nombre IS NOT NULL AND var_apellido IS NOT NULL THEN
+RETURN SUBSTR(var_nombre,1,2)||'.'||SUBSTR(var_apellido,1,2)||'-'||var_3||estudiante_id||'@colegio.com';
+END IF;
+EXCEPTION
+WHEN no_data_found THEN
+RETURN 'Estudiante no encontrado';
+END;
+
+SELECT correo_est(87) From dual;
+
+CREATE OR REPLACE PROCEDURE
+insertar_estudiante (nombre estudiantes.nombre%type, apellido estudiantes.apellido%type, especialidad estudiantes.especialidad%type, creditos estudiantes.creditos%type)
+AS
+var_id estudiantes.id%type;
+BEGIN 
+SELECT COUNT(*)+1 INTO var_id FROM estudiantes;
+INSERT INTO estudiantes VALUES (var_id, nombre, apellido, especialidad, creditos);
+END;
+
+EXECUTE insertar_estudiante('Santiago', 'Grisales', 'Ingenieria', 9);
+SELECT * FROM estudiantes;
+
+
+//EJERCICIO 8
+
+CREATE OR REPLACE PROCEDURE 
+contar_matriculas
+AS
+BEGIN
+FOR i IN (SELECT count (NCURSO) as var_1,ncurso FROM matriculas GROUP BY NCURSO) LOOP
+CASE 
+when i.var_1>=0 and i.var_1<=10 then
+dbms_output.put_line('CURSO: '||i.ncurso||' |NUMERO_DE_MATRICULAS: '||i.var_1||' |NIVEL POBLACIONAL: BAJO');
+
+when i.var_1>=11 and i.var_1<=20 then
+dbms_output.put_line('CURSO: '||i.ncurso||' |NUMERO_DE_MATRICULAS: '||i.var_1||' |NIVEL POBLACIONAL: MEDIO');
+
+when i.var_1>=21 then
+dbms_output.put_line('CURSO: '||i.ncurso||' |NUMERO_DE_MATRICULAS: '||i.var_1||' |NIVEL POBLACIONAL: ALTO');
+END CASE;
+END LOOP;
+END;
+
+EXECUTE contar_matriculas();
